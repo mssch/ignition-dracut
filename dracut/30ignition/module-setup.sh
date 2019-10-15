@@ -3,7 +3,7 @@
 # ex: ts=8 sw=4 sts=4 et filetype=sh
 
 depends() {
-    echo qemu systemd url-lib network
+    echo systemd url-lib network
 }
 
 install_ignition_unit() {
@@ -15,14 +15,6 @@ install_ignition_unit() {
     ln_r "../$unit" "$systemdsystemunitdir/$target.requires/$instantiated"
 }
 
-add_requires() {
-    local name="$1"; shift
-    local target="$1"; shift
-    local requires_dir="${UNIT_DIR}/${target}.requires"
-    mkdir -p "${requires_dir}"
-    ln -sf "../${name}" "${requires_dir}/${name}"
-}
-
 install() {
     inst_multiple \
         chroot \
@@ -30,19 +22,14 @@ install() {
         id \
         lsblk \
         mkfs.ext4 \
-        mkfs.vfat \
         mkfs.xfs \
         mkswap \
         mountpoint \
-        sgdisk \
         systemd-detect-virt \
         useradd \
         usermod \
         realpath \
         touch
-
-    # This one is optional; https://src.fedoraproject.org/rpms/ignition/pull-request/9
-    inst_multiple -o mkfs.btrfs
 
     inst_script "$moddir/ignition-setup-base.sh" \
         "/usr/sbin/ignition-setup-base"
@@ -54,6 +41,9 @@ install() {
     inst_simple "$moddir/ignition" \
         "/usr/bin/ignition"
 
+    inst_simple "$moddir/ignition-generator" \
+        "$systemdutildir/system-generators/ignition-generator"
+
     inst_simple "$moddir/ignition-complete.target" \
         "$systemdsystemunitdir/ignition-complete.target"
 
@@ -63,8 +53,6 @@ install() {
     install_ignition_unit ignition-disks.service
     install_ignition_unit ignition-mount.service
     install_ignition_unit ignition-files.service
-
-    add_requires ignition-complete.target initrd.target
 }
 
 has_fw_cfg_module() {
